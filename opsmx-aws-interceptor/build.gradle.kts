@@ -28,6 +28,8 @@ repositories {
     mavenCentral()
 }
 
+version = "1.0.0"
+
 dependencies {
     // Align versions of all Kotlin components
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))

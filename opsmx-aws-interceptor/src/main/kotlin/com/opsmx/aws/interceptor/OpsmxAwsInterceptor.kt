@@ -16,10 +16,6 @@
 
 package com.opsmx.aws.interceptor
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 import software.amazon.awssdk.auth.credentials.AwsCredentials
 import software.amazon.awssdk.core.interceptor.Context
@@ -30,15 +26,19 @@ import software.amazon.awssdk.http.SdkHttpRequest
 import software.amazon.awssdk.regions.Region
 import java.util.*
 
-@Serializable
-data class AgentToken(@SerialName("iss") val issuer: String?)
-
 class OpsmxAwsInterceptor : ExecutionInterceptor {
     private val logger = LoggerFactory.getLogger(javaClass)
 
     private val hostname = getprop("opsmx.controller.aws.hostname")
     private val port = getprop("opsmx.controller.aws.port")
     private val configured = hostname != null && port != null
+
+    init {
+        logger.info("Loaded OpsmxAwsInterceptor, hostname=${hostname} port=${port}")
+        if (!configured) {
+            logger.info("OpsmxAwsInterceptor not configured.")
+        }
+    }
 
     fun getprop(name: String) : String? {
         val ret = System.getProperty(name)
@@ -58,7 +58,7 @@ class OpsmxAwsInterceptor : ExecutionInterceptor {
         }
 
         val credentials = executionAttributes.getAttribute(ExecutionAttribute<AwsCredentials>("AwsCredentials"))
-        
+
         if (credentials == null) {
             logger.debug("No credentials")
             return context.httpRequest()
@@ -74,8 +74,7 @@ class OpsmxAwsInterceptor : ExecutionInterceptor {
         // If it isn't issued by us, make no modifications.
         try {
             val jsonString = Base64.getDecoder().decode(fields[1])
-            val agentSpec = Json.decodeFromString<AgentToken>(String(jsonString))
-            if (agentSpec.issuer == null || agentSpec.issuer != "opsmx") {
+            if (!String(jsonString).contains("\"iss\":\"opsmx\"")) {
                 logger.debug("Not a JWT issued by opsmx")
                 return context.httpRequest()
             }
@@ -87,9 +86,12 @@ class OpsmxAwsInterceptor : ExecutionInterceptor {
         val signingRegion = executionAttributes.getAttribute(ExecutionAttribute<Region>("SigningRegion"))
         val serviceSigningName = executionAttributes.getAttribute(ExecutionAttribute<String>("ServiceSigningName"))
 
+        val origPort = context.httpRequest().port()
+        val origHost = context.httpRequest().host()
+
         return context.httpRequest().copy {
-            it.putHeader("x-opsmx-original-host", it.host())
-            it.putHeader("x-opsmx-original-port", it.port().toString())
+            it.putHeader("x-opsmx-original-host", origHost)
+            it.putHeader("x-opsmx-original-port", origPort.toString())
             it.putHeader("x-opsmx-signing-region", signingRegion.toString())
             it.putHeader("x-opsmx-service-signing-name", serviceSigningName)
             it.putHeader("x-opsmx-token", credentials.secretAccessKey())

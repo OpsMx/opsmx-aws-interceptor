@@ -16,6 +16,8 @@
 
 package com.opsmx.aws.interceptor
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.json.Json
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.AwsCredentials
@@ -30,6 +32,9 @@ import java.util.*
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+
+@Serializable
+data class AgentToken(@SerialName("iss") val issuer: String?)
 
 class OpsmxAwsInterceptorTest {
     private val req = SdkHttpRequest.builder()
