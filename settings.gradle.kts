@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-rootProject.name = "opsmx-aws-intereptor"
-include("lib")
+rootProject.name = "opsmx-aws-interceptor"
+include("opsmx-aws-interceptor")
